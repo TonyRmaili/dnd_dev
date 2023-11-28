@@ -1,17 +1,15 @@
 import dice as d
-import Items as i
+from Items import *
 import races as r
 import fighter as f
 import wizard as w
 import backgrounds as b
 import Skills as sk
 import pygame
-import random as rn
+from tile2 import *
 
-
-
-class Character(pygame.sprite.Sprite):            
-    def __init__(self,name,stre, dex, con, inte ,wis, cha,speed,size,pos,image,groups):
+class Character(pygame.sprite.Sprite):          
+    def __init__(self,name,race,background,stre,dex,con,inte,wis,cha,groups):
         super().__init__(groups)
         self.name = name
         self.stre= stre
@@ -20,81 +18,45 @@ class Character(pygame.sprite.Sprite):
         self.inte= inte
         self.wis= wis
         self.cha= cha        
-               
-        self.race = ''
-        self.background = ''      
+        self.race = race
+        self.speed = 0
+        self.movement = self.speed
+        self.size = 0
+        self.background = background
+           
         self.class_lvls = [0,0]     
         self.max_hp = 0
         self.wound = 0
-
-        # complex attributes
         self.proficiencies = {'Saves':[0,0,0,0,0,0],'Skills':[],'Weapon':[],'Armor':[]}    
         self.inventory = []
         self.equiped = {'Head':None,'Neck':None,'Body':None,'Hands':None,
                         'Feet':None,'Finger':None,'Back':None}       
         self.powers = {'Fighter':[],'Wizard':[]}
     
+        self.actions = {'Attack':self.roll_attack,'Dash':self.dash, 'Dodge':None}
+        self.bonus_actions = {}
+        self.grp = groups   # access groups
+        self.offset_pos = (0,0)
+        self.offset_rect = pygame.rect.Rect(self.offset_pos[0],
+                                    self.offset_pos[1],
+                                    self.size,self.size)
+
+    
         
-        # 2d implements
-        self.size = size
-        self.speed = speed
-        self.movement = self.speed
+
+    def load_image(self,image,pos,menu_pos):
+        self.pos = pos
         self.image= pygame.image.load(image)
         self.image = pygame.transform.scale(self.image,(self.size,self.size))
         self.rect= self.image.get_rect(topleft=pos)
 
+        # menu stuff
+        self.action_menu = Menu2(menu_pos,'Actions',self.actions,menu_grp)
     
-    def move(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            self.rect.y -= self.size
-            self.movement -=1
-        elif keys[pygame.K_DOWN]:
-            self.rect.y += self.size  
-            self.movement -=1       
-        elif keys[pygame.K_RIGHT]:
-            self.rect.x += self.size    
-            self.movement -=1 
-        elif keys[pygame.K_LEFT]:
-            self.rect.x -= self.size
-            self.movement -=1
-        
-        
-    # remove or implement
-    def move2(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_KP7]:
-            self.rect.y -= self.size
-            self.rect.x -= self.size
-            self.movement -=1
-        elif keys[pygame.K_KP9]:
-            self.rect.y -= self.size
-            self.rect.x += self.size
-            self.movement -=1
-        elif keys[pygame.K_KP1]:
-            self.rect.y += self.size  
-            self.rect.x -= self.size
-            self.movement -=1
-        elif keys[pygame.K_KP3]:
-            self.rect.y += self.size 
-            self.rect.x += self.size
-            self.movement -=1
+        self.action_menu.close()
 
-        elif keys[pygame.K_KP8]:
-            self.rect.y -= self.size
-            self.movement -=1
-        elif keys[pygame.K_KP2]:
-            self.rect.y += self.size  
-            self.movement -=1
-        elif keys[pygame.K_KP4]:
-            self.rect.x -= self.size
-            self.movement -=1
-        elif keys[pygame.K_KP6]:
-            self.rect.x += self.size
-            self.movement -=1
-        
-
-        # Combat methods
+    def dash(self):
+        self.movement += self.speed
 
     def __str__(self):
         return f'{self.name}'
@@ -102,6 +64,7 @@ class Character(pygame.sprite.Sprite):
     def lvl(self):
         return sum(self.class_lvls)
     
+    # outdated
     def lvlup(self):
         class_options = {0: f.fighter, 1:w.wizard}
         class_names = {0: 'fighter', 1:'wizard'}
@@ -113,7 +76,7 @@ class Character(pygame.sprite.Sprite):
             class_options[choice](self)
         else:
             print('Invalid choice')
- 
+
     def ability_score(self):
         return [self.stre,self.dex,self.con,self.inte,self.wis,self.cha]
     
@@ -166,7 +129,7 @@ class Character(pygame.sprite.Sprite):
         
     def roll_save(self,ability):       
         return d.roll_d20() + self.saving_throws()[ability]
-                
+                   
     def roll_skill(self,ability,skill):
         
         if sk.Skills[ability][skill] in self.proficiencies['Skills']:
@@ -175,21 +138,26 @@ class Character(pygame.sprite.Sprite):
             return d.roll_d20() + self.ability_mod()[ability] 
     
     def roll_attack(self):
-        x = d.roll_d20()
-        if self.equiped['Hands'] == None:
-            return x + self.ability_mod()[0] + self.PB()
+        print('attack rolled on target')
         
-        elif self.equiped['Hands'].subtypes[0] in self.proficiencies['Weapon']:
-            if self.equiped['Hands'].subtypes[1] == 'melee':
-                return x + self.ability_mod()[0] + self.PB()
-            elif self.equiped['Hands'].subtypes[1] == 'ranged':
-                return x + self.ability_mod()[1] + self.PB()
-        else:
-            if self.equiped['Hands'].subtypes[1] == 'melee':
-                return x + self.ability_mod()[0] 
-            elif self.equiped['Hands'].subtypes[1] == 'ranged':
-                return x + self.ability_mod()[1] 
-            
+
+
+        # x = d.roll_d20()
+        # if self.equiped['Hands'] == None:
+        #     return x + self.ability_mod()[0] + self.PB()
+        
+        # elif self.equiped['Hands'].subtypes[0] in self.proficiencies['Weapon']:
+        #     if self.equiped['Hands'].subtypes[1] == 'melee':
+        #         return x + self.ability_mod()[0] + self.PB()
+        #     elif self.equiped['Hands'].subtypes[1] == 'ranged':
+        #         return x + self.ability_mod()[1] + self.PB()
+        # else:
+        #     if self.equiped['Hands'].subtypes[1] == 'melee':
+        #         return x + self.ability_mod()[0] 
+        #     elif self.equiped['Hands'].subtypes[1] == 'ranged':
+        #         return x + self.ability_mod()[1] 
+    
+
     def roll_damage(self):
         if self.equiped['Hands'] == None:
             return self.ability_mod()[0]
@@ -198,10 +166,23 @@ class Character(pygame.sprite.Sprite):
                 return self.equiped['Hands'].damage + self.ability_mod()[0]
             elif self.equiped['Hands'].subtypes[1] == 'ranged':
                 return self.equiped['Hands'].damage + self.ability_mod()[1]
-        
 
 
-
+def view_char(char):   
+    print('Name-------',char.name)
+    print('Race-------',char.race)
+    print('Background-',char.background)
+    print('Class lvls--------',char.class_lvls)
+    print('Total lvls--------',char.lvl())
+    print('Proficiency bonus-',char.PB())
+    print('Max Hp:-----------',char.max_hp)
+    print('Armor Class-------',char.AC())
+    print('Ability Scores    ',char.ability_score())
+    
+    print('Ability modifiers ',char.ability_mod())   
+    print('Saving Throws     ',char.saving_throws())   
+    
+    print('Proficiencies:     ',char.proficiencies)
 
 
 

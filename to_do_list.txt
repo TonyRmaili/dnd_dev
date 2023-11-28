@@ -1,0 +1,44 @@
+
+Button needs click functionality and 
+Menu needs active status and update
+
+
+
+Time for combat
+- methods needed 
+
+
+action/bonus tracker
+deal damage
+remove killed from list
+
+
+After combat
+-exp and loot handout
+-equipment manager
+
+Monster AI dev
+-develop distance
+
+class Spell
+
+
+expand fighter and wizard levels and add the actions 
+
+test with Items 
+
+
+
+
+
+clean up duplicate files and merge - Character, classes, bg,race, tile, creation_screen, settings
+
+- Classes to class =?
+
+
+
+Gameplay improvemnts
+- have only free roam camera
+- Action menus shown on info panel, always active and linked to the current acter
+- Better way to handle all menus, such updating and hiding etc
+
